@@ -137,6 +137,20 @@ docker run -d --name uc-eero --restart unless-stopped -p 9090:9090 -v eero-confi
 
 ## Configuration
 
+### Important: Amazon-Linked Accounts Not Supported
+
+This integration uses the eero cloud API which **does not support Amazon-linked accounts**. If you log into the eero app using your Amazon account, you must create a separate native eero account to use this integration.
+
+**Workaround:**
+
+1. Create a new eero account using a direct email address (not Amazon login)
+2. Open the eero app with your Amazon-linked account
+3. Go to **Settings** → **Network Admin Management**
+4. Add the new email as a **network admin**
+5. Use the new email in this integration's setup flow
+
+For detailed instructions, see [this guide](https://github.com/schmittx/home-assistant-eero/issues/77#issuecomment-1960875926).
+
 ### Step 1: Start Setup
 
 1. After installation, go to **Settings** → **Integrations**
@@ -160,7 +174,7 @@ The integration creates sensor, switch, and button entities for your network and
 ## Authentication
 
 This integration uses the eero cloud API with cookie-based token authentication:
-- Login is initiated with your eero account email or phone number
+- Login is initiated with your eero account email or phone number (native eero account only, not Amazon-linked)
 - A verification code is sent by eero (SMS or email)
 - The token is stored locally and refreshed automatically when expired
 - No passwords are stored — only the session token

@@ -51,7 +51,11 @@ class EeroSetupFlow(BaseSetupFlow[EeroDeviceConfig]):
                             "value": {
                                 "en": (
                                     "Enter your eero account email or phone number. "
-                                    "eero will send a verification code to authenticate."
+                                    "eero will send a verification code to authenticate.\n\n"
+                                    "NOTE: Amazon-linked eero accounts are NOT supported. "
+                                    "You must use a native eero account (email/phone). "
+                                    "If your account is Amazon-linked, create a new eero account "
+                                    "and add it as a network admin in the eero app."
                                 )
                             }
                         }
