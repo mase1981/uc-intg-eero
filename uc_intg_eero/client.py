@@ -9,9 +9,11 @@ Converted from synchronous requests to async aiohttp.
 """
 
 import logging
+import ssl
 from typing import Any
 
 import aiohttp
+import certifi
 
 from uc_intg_eero.const import API_ENDPOINT, URL_ACCOUNT
 
@@ -43,7 +45,9 @@ class EeroClient:
 
     async def _ensure_session(self):
         if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession()
+            ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+            connector = aiohttp.TCPConnector(ssl=ssl_ctx)
+            self._session = aiohttp.ClientSession(connector=connector)
 
     def _cookies(self) -> dict:
         if self._user_token:
