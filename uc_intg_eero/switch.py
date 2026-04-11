@@ -9,9 +9,7 @@ import logging
 from typing import Any
 
 from ucapi import StatusCodes
-from ucapi.switch import Attributes, Commands, States
-
-from ucapi_framework import SwitchEntity, SwitchAttributes, create_entity_id
+from ucapi.switch import Attributes, Commands, States, Switch
 
 from uc_intg_eero.config import EeroDeviceConfig
 from uc_intg_eero.device import EeroDevice
@@ -19,7 +17,7 @@ from uc_intg_eero.device import EeroDevice
 _LOG = logging.getLogger(__name__)
 
 
-class EeroSwitch(SwitchEntity):
+class EeroSwitch(Switch):
     """Base eero switch entity for network feature toggles."""
 
     def __init__(
@@ -33,7 +31,7 @@ class EeroSwitch(SwitchEntity):
         self._config = config
         self._switch_id = switch_id
 
-        entity_id = create_entity_id("switch", config.identifier, switch_id)
+        entity_id = f"switch.{config.identifier}.{switch_id}"
 
         super().__init__(
             entity_id,
@@ -43,41 +41,30 @@ class EeroSwitch(SwitchEntity):
             cmd_handler=self._handle_command,
         )
 
-        self.subscribe_to_device(device)
-
-    async def _handle_command(self, entity_id: str, cmd_id: str, params: dict[str, Any] | None) -> StatusCodes:
+    async def _handle_command(self, entity: Switch, cmd_id: str, params: dict[str, Any] | None) -> StatusCodes:
         if not self._device.is_connected or not self._device.client:
             return StatusCodes.SERVICE_UNAVAILABLE
 
         try:
             if cmd_id == Commands.ON:
                 await self._set_value(True)
-                self.update(SwitchAttributes(STATE=States.ON))
+                self.attributes[Attributes.STATE] = States.ON
                 return StatusCodes.OK
             elif cmd_id == Commands.OFF:
                 await self._set_value(False)
-                self.update(SwitchAttributes(STATE=States.OFF))
+                self.attributes[Attributes.STATE] = States.OFF
                 return StatusCodes.OK
             elif cmd_id == Commands.TOGGLE:
                 current = self._get_current_state()
                 new_state = not current
                 await self._set_value(new_state)
-                self.update(SwitchAttributes(STATE=States.ON if new_state else States.OFF))
+                self.attributes[Attributes.STATE] = States.ON if new_state else States.OFF
                 return StatusCodes.OK
         except Exception as err:
             _LOG.error("Switch %s command %s failed: %s", self._switch_id, cmd_id, err)
             return StatusCodes.SERVER_ERROR
 
         return StatusCodes.NOT_IMPLEMENTED
-
-    async def sync_state(self) -> None:
-        if not hasattr(self, "_api"):
-            return
-        if not self._device.is_connected:
-            self.update(SwitchAttributes(STATE=States.UNAVAILABLE))
-            return
-        current = self._get_current_state()
-        self.update(SwitchAttributes(STATE=States.ON if current else States.OFF))
 
     def _get_current_state(self) -> bool:
         raise NotImplementedError
@@ -230,7 +217,7 @@ class Pause5gSwitch(EeroSwitch):
         await self._device.client.set_pause_5g(self._device.network_url, value)
 
 
-class EeroLedSwitch(SwitchEntity):
+class EeroLedSwitch(Switch):
     """Switch for individual eero node LED status light."""
 
     def __init__(
@@ -250,7 +237,7 @@ class EeroLedSwitch(SwitchEntity):
         location = eero_data.get("location", f"Eero {index + 1}")
         eero_id = self._eero_url.replace("/2.2/eeros/", "") if self._eero_url else f"eero_{index}"
 
-        entity_id = create_entity_id("switch", config.identifier, f"led_{eero_id}")
+        entity_id = f"switch.{config.identifier}.led_{eero_id}"
 
         super().__init__(
             entity_id,
@@ -260,46 +247,30 @@ class EeroLedSwitch(SwitchEntity):
             cmd_handler=self._handle_command,
         )
 
-        self.subscribe_to_device(device)
-
-    async def _handle_command(self, entity_id: str, cmd_id: str, params: dict[str, Any] | None) -> StatusCodes:
+    async def _handle_command(self, entity: Switch, cmd_id: str, params: dict[str, Any] | None) -> StatusCodes:
         if not self._device.is_connected or not self._device.client:
             return StatusCodes.SERVICE_UNAVAILABLE
 
         try:
             if cmd_id == Commands.ON:
                 await self._device.client.set_eero_led(self._led_url, True)
-                self.update(SwitchAttributes(STATE=States.ON))
+                self.attributes[Attributes.STATE] = States.ON
                 return StatusCodes.OK
             elif cmd_id == Commands.OFF:
                 await self._device.client.set_eero_led(self._led_url, False)
-                self.update(SwitchAttributes(STATE=States.OFF))
+                self.attributes[Attributes.STATE] = States.OFF
                 return StatusCodes.OK
             elif cmd_id == Commands.TOGGLE:
                 eero = self._find_eero()
                 current = eero.get("led_on", True) if eero else True
                 await self._device.client.set_eero_led(self._led_url, not current)
-                self.update(SwitchAttributes(STATE=States.OFF if current else States.ON))
+                self.attributes[Attributes.STATE] = States.OFF if current else States.ON
                 return StatusCodes.OK
         except Exception as err:
             _LOG.error("LED switch command failed: %s", err)
             return StatusCodes.SERVER_ERROR
 
         return StatusCodes.NOT_IMPLEMENTED
-
-    async def sync_state(self) -> None:
-        if not hasattr(self, "_api"):
-            return
-        if not self._device.is_connected:
-            self.update(SwitchAttributes(STATE=States.UNAVAILABLE))
-            return
-
-        eero = self._find_eero()
-        if eero:
-            led_on = eero.get("led_on", True)
-            self.update(SwitchAttributes(STATE=States.ON if led_on else States.OFF))
-        else:
-            self.update(SwitchAttributes(STATE=States.UNAVAILABLE))
 
     def _find_eero(self) -> dict | None:
         for eero in self._device.eeros:

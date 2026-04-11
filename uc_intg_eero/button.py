@@ -9,9 +9,7 @@ import logging
 from typing import Any
 
 from ucapi import StatusCodes
-from ucapi.button import Attributes, Commands, States
-
-from ucapi_framework import ButtonEntity, create_entity_id
+from ucapi.button import Button, Commands
 
 from uc_intg_eero.config import EeroDeviceConfig
 from uc_intg_eero.device import EeroDevice
@@ -19,7 +17,7 @@ from uc_intg_eero.device import EeroDevice
 _LOG = logging.getLogger(__name__)
 
 
-class EeroButton(ButtonEntity):
+class EeroButton(Button):
     """Base eero button entity."""
 
     def __init__(
@@ -33,19 +31,15 @@ class EeroButton(ButtonEntity):
         self._config = config
         self._button_id = button_id
 
-        entity_id = create_entity_id("button", config.identifier, button_id)
+        entity_id = f"button.{config.identifier}.{button_id}"
 
         super().__init__(
             entity_id,
             f"{config.name} - {button_name}",
-            [],
-            {Attributes.STATE: States.AVAILABLE},
             cmd_handler=self._handle_command,
         )
 
-        self.subscribe_to_device(device)
-
-    async def _handle_command(self, entity_id: str, cmd_id: str, params: dict[str, Any] | None) -> StatusCodes:
+    async def _handle_command(self, entity: Button, cmd_id: str, params: dict[str, Any] | None) -> StatusCodes:
         if not self._device.is_connected or not self._device.client:
             return StatusCodes.SERVICE_UNAVAILABLE
 
@@ -61,14 +55,6 @@ class EeroButton(ButtonEntity):
 
     async def _execute(self) -> None:
         raise NotImplementedError
-
-    async def sync_state(self) -> None:
-        if not hasattr(self, "_api"):
-            return
-        if self._device.is_connected:
-            self.update({Attributes.STATE: States.AVAILABLE})
-        else:
-            self.update({Attributes.STATE: States.UNAVAILABLE})
 
 
 class RebootNetworkButton(EeroButton):
@@ -97,7 +83,7 @@ class RunSpeedTestButton(EeroButton):
         _LOG.info("[%s] Speed test initiated", self._device.log_id)
 
 
-class RebootEeroButton(ButtonEntity):
+class RebootEeroButton(Button):
     """Button to reboot an individual eero node."""
 
     def __init__(
@@ -117,19 +103,15 @@ class RebootEeroButton(ButtonEntity):
         location = eero_data.get("location", f"Eero {index + 1}")
         eero_id = self._eero_url.replace("/2.2/eeros/", "") if self._eero_url else f"eero_{index}"
 
-        entity_id = create_entity_id("button", config.identifier, f"reboot_{eero_id}")
+        entity_id = f"button.{config.identifier}.reboot_{eero_id}"
 
         super().__init__(
             entity_id,
             f"{config.name} - Reboot {location}",
-            [],
-            {Attributes.STATE: States.AVAILABLE},
             cmd_handler=self._handle_command,
         )
 
-        self.subscribe_to_device(device)
-
-    async def _handle_command(self, entity_id: str, cmd_id: str, params: dict[str, Any] | None) -> StatusCodes:
+    async def _handle_command(self, entity: Button, cmd_id: str, params: dict[str, Any] | None) -> StatusCodes:
         if not self._device.is_connected or not self._device.client:
             return StatusCodes.SERVICE_UNAVAILABLE
 
@@ -145,14 +127,6 @@ class RebootEeroButton(ButtonEntity):
                 return StatusCodes.SERVER_ERROR
 
         return StatusCodes.NOT_IMPLEMENTED
-
-    async def sync_state(self) -> None:
-        if not hasattr(self, "_api"):
-            return
-        if self._device.is_connected:
-            self.update({Attributes.STATE: States.AVAILABLE})
-        else:
-            self.update({Attributes.STATE: States.UNAVAILABLE})
 
 
 def create_buttons(config: EeroDeviceConfig, device: EeroDevice) -> list:

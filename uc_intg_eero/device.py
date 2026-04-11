@@ -315,11 +315,78 @@ class EeroDevice(PollingDevice):
 
         try:
             await self._fetch_data()
-            self.push_update()
+            self._emit_entity_updates()
         except Exception as err:
             _LOG.warning("[%s] Poll failed: %s", self.log_id, err)
             self._is_connected = False
             self.events.emit(DeviceEvents.DISCONNECTED, self.identifier)
+
+    def _emit_entity_updates(self) -> None:
+        """Emit per-entity UPDATE events for all entities."""
+        ident = self._device_config.identifier
+
+        # Sensor updates
+        self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.network_status",
+                        {"state": "ON", "value": f"{self.network_status} | Internet: {self.health_internet_status}"})
+        self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.gateway_ip",
+                        {"state": "ON", "value": self.gateway_ip})
+        self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.public_ip",
+                        {"state": "ON", "value": self.public_ip})
+        self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.wan_router_ip",
+                        {"state": "ON", "value": self.wan_router_ip})
+        self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.speed_down",
+                        {"state": "ON", "value": self.speed_down})
+        self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.speed_up",
+                        {"state": "ON", "value": self.speed_up})
+        self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.connected_clients",
+                        {"state": "ON", "value": str(self.connected_clients_count)})
+        self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.eero_count",
+                        {"state": "ON", "value": str(self.eero_count)})
+        self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.isp",
+                        {"state": "ON", "value": self.isp})
+        self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.speed_date",
+                        {"state": "ON", "value": self.speed_date})
+
+        for eero_data in self._eeros:
+            eero_url = eero_data.get("url", "")
+            eero_id = eero_url.replace("/2.2/eeros/", "") if eero_url else ""
+            if eero_id:
+                status = eero_data.get("status", "unknown")
+                clients = eero_data.get("connected_clients_count", 0)
+                os_ver = eero_data.get("os_version", "?")
+                value = f"{status} | Clients: {clients} | OS: {os_ver}"
+                self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.eero_{eero_id}",
+                                {"state": "ON", "value": value})
+
+        # Switch updates
+        switch_states = {
+            "guest_network": self.guest_network_enabled,
+            "band_steering": self.band_steering,
+            "sqm": self.sqm,
+            "upnp": self.upnp,
+            "wpa3": self.wpa3,
+            "ipv6": self.ipv6,
+            "dns_caching": self.dns_caching,
+            "ad_block": self.ad_block_enabled,
+            "block_malware": self.block_malware,
+            "thread": self.thread_enabled,
+            "ddns": self.ddns_enabled,
+            "pause_5g": self.pause_5g_enabled,
+        }
+        for switch_id, enabled in switch_states.items():
+            state = "ON" if enabled else "OFF"
+            self.events.emit(DeviceEvents.UPDATE, f"switch.{ident}.{switch_id}",
+                            {"state": state})
+
+        for eero_data in self._eeros:
+            eero_url = eero_data.get("url", "")
+            eero_id = eero_url.replace("/2.2/eeros/", "") if eero_url else ""
+            if eero_id:
+                led_on = eero_data.get("led_on", True)
+                self.events.emit(DeviceEvents.UPDATE, f"switch.{ident}.led_{eero_id}",
+                                {"state": "ON" if led_on else "OFF"})
+
+        _LOG.debug("[%s] Emitted entity updates", self.log_id)
 
     async def disconnect(self) -> None:
         _LOG.info("[%s] Disconnecting", self.log_id)

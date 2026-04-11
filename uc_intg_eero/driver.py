@@ -18,22 +18,16 @@ from uc_intg_eero.switch import create_network_switches, create_eero_led_switche
 _LOG = logging.getLogger(__name__)
 
 
-def _create_all_entities(config: EeroDeviceConfig, device: EeroDevice) -> list:
-    """Create all entities for the eero network."""
-    entities = []
-    entities.extend(create_sensors(config, device))
-    entities.extend(create_network_switches(config, device))
-    entities.extend(create_eero_led_switches(config, device))
-    entities.extend(create_buttons(config, device))
-    return entities
-
-
 class EeroDriver(BaseIntegrationDriver[EeroDevice, EeroDeviceConfig]):
     """eero WiFi integration driver."""
 
     def __init__(self):
         super().__init__(
             device_class=EeroDevice,
-            entity_classes=[_create_all_entities],
-            require_connection_before_registry=True,
+            entity_classes=[
+                lambda cfg, dev: create_sensors(cfg, dev),
+                lambda cfg, dev: create_network_switches(cfg, dev),
+                lambda cfg, dev: create_eero_led_switches(cfg, dev),
+                lambda cfg, dev: create_buttons(cfg, dev),
+            ],
         )
