@@ -13,8 +13,9 @@ import asyncio
 import logging
 from typing import Any
 
-from ucapi import RequestUserInput, SetupError
-from ucapi_framework import BaseSetupFlow
+from ucapi import RequestUserInput, SetupAction, SetupError
+from ucapi.api_definitions import DriverSetupRequest
+from ucapi_framework import BaseSetupFlow, SetupSteps
 
 from uc_intg_eero.client import EeroClient
 from uc_intg_eero.config import EeroDeviceConfig
@@ -24,6 +25,19 @@ _LOG = logging.getLogger(__name__)
 
 class EeroSetupFlow(BaseSetupFlow[EeroDeviceConfig]):
     """eero setup flow with 2-step cloud authentication."""
+
+    async def _handle_driver_setup_request(
+        self, msg: DriverSetupRequest
+    ) -> SetupAction:
+        """Skip restore prompt - go directly to manual entry."""
+        if msg.reconfigure:
+            self._setup_step = SetupSteps.CONFIGURATION_MODE
+            return await self._build_configuration_mode_screen()
+
+        self.config.clear()
+        self._pre_discovery_data = {}
+        self._setup_step = SetupSteps.MANUAL_ENTRY
+        return self.get_manual_entry_form()
 
     def get_manual_entry_form(self) -> RequestUserInput:
         return RequestUserInput(
