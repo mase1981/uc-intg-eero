@@ -71,6 +71,8 @@ class EeroSwitch(SwitchEntity):
         return StatusCodes.NOT_IMPLEMENTED
 
     async def sync_state(self) -> None:
+        if not hasattr(self, "_api"):
+            return
         if not self._device.is_connected:
             self.update(SwitchAttributes(STATE=States.UNAVAILABLE))
             return
@@ -241,7 +243,8 @@ class EeroLedSwitch(SwitchEntity):
         self._device = device
         self._config = config
         self._eero_url = eero_data.get("url", "")
-        self._led_url = eero_data.get("resources", {}).get("led_action", "")
+        resources = eero_data.get("resources", {})
+        self._led_url = resources.get("led_action", "") if isinstance(resources, dict) else ""
         self._index = index
 
         location = eero_data.get("location", f"Eero {index + 1}")
@@ -285,6 +288,8 @@ class EeroLedSwitch(SwitchEntity):
         return StatusCodes.NOT_IMPLEMENTED
 
     async def sync_state(self) -> None:
+        if not hasattr(self, "_api"):
+            return
         if not self._device.is_connected:
             self.update(SwitchAttributes(STATE=States.UNAVAILABLE))
             return
@@ -327,7 +332,8 @@ def create_eero_led_switches(config: EeroDeviceConfig, device: EeroDevice) -> li
     """Create LED switch entities for each eero node."""
     switches = []
     for i, eero_data in enumerate(device.eeros):
-        led_url = eero_data.get("resources", {}).get("led_action", "")
+        resources = eero_data.get("resources", {})
+        led_url = resources.get("led_action", "") if isinstance(resources, dict) else ""
         if led_url:
             switches.append(EeroLedSwitch(config, device, eero_data, i))
     return switches

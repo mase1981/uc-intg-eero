@@ -52,6 +52,8 @@ class EeroSensor(SensorEntity):
         self.subscribe_to_device(device)
 
     async def sync_state(self) -> None:
+        if not hasattr(self, "_api"):
+            return
         value = self._get_value()
         self.update(SensorAttributes(
             STATE=States.ON if self._device.is_connected else States.UNAVAILABLE,
@@ -179,6 +181,8 @@ class EeroNodeSensor(SensorEntity):
         self.subscribe_to_device(device)
 
     async def sync_state(self) -> None:
+        if not hasattr(self, "_api"):
+            return
         eero_data = self._find_eero()
         if eero_data:
             status = eero_data.get("status", "unknown")

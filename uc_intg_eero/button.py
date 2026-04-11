@@ -63,6 +63,8 @@ class EeroButton(ButtonEntity):
         raise NotImplementedError
 
     async def sync_state(self) -> None:
+        if not hasattr(self, "_api"):
+            return
         if self._device.is_connected:
             self.update({Attributes.STATE: States.AVAILABLE})
         else:
@@ -108,7 +110,8 @@ class RebootEeroButton(ButtonEntity):
         self._device = device
         self._config = config
         self._eero_url = eero_data.get("url", "")
-        self._reboot_url = eero_data.get("resources", {}).get("reboot", "")
+        resources = eero_data.get("resources", {})
+        self._reboot_url = resources.get("reboot", "") if isinstance(resources, dict) else ""
         self._index = index
 
         location = eero_data.get("location", f"Eero {index + 1}")
@@ -144,6 +147,8 @@ class RebootEeroButton(ButtonEntity):
         return StatusCodes.NOT_IMPLEMENTED
 
     async def sync_state(self) -> None:
+        if not hasattr(self, "_api"):
+            return
         if self._device.is_connected:
             self.update({Attributes.STATE: States.AVAILABLE})
         else:
@@ -158,7 +163,8 @@ def create_buttons(config: EeroDeviceConfig, device: EeroDevice) -> list:
     ]
 
     for i, eero_data in enumerate(device.eeros):
-        reboot_url = eero_data.get("resources", {}).get("reboot", "")
+        resources = eero_data.get("resources", {})
+        reboot_url = resources.get("reboot", "") if isinstance(resources, dict) else ""
         if reboot_url:
             buttons.append(RebootEeroButton(config, device, eero_data, i))
 

@@ -17,6 +17,15 @@ from uc_intg_eero.const import POLL_INTERVAL
 _LOG = logging.getLogger(__name__)
 
 
+def _safe_get(data: dict, *keys, default=None):
+    """Safely traverse nested dict keys, returning default if any key is missing or not a dict."""
+    for key in keys:
+        if not isinstance(data, dict):
+            return default
+        data = data.get(key, default)
+    return data
+
+
 class EeroDevice(PollingDevice):
     """eero WiFi network device with cloud polling."""
 
@@ -101,11 +110,11 @@ class EeroDevice(PollingDevice):
 
     @property
     def public_ip(self) -> str:
-        return self._network_data.get("ip_settings", {}).get("public_ip", "N/A")
+        return _safe_get(self._network_data, "ip_settings", "public_ip", default="N/A")
 
     @property
     def wan_router_ip(self) -> str:
-        return self._network_data.get("lease", {}).get("dhcp", {}).get("router", "N/A")
+        return _safe_get(self._network_data, "lease", "dhcp", "router", default="N/A")
 
     @property
     def speed_down(self) -> str:
@@ -121,11 +130,11 @@ class EeroDevice(PollingDevice):
 
     @property
     def speed_date(self) -> str:
-        return self._network_data.get("speed", {}).get("date", "N/A")
+        return _safe_get(self._network_data, "speed", "date", default="N/A")
 
     @property
     def connected_clients_count(self) -> int:
-        return self._network_data.get("clients", {}).get("count", 0)
+        return _safe_get(self._network_data, "clients", "count", default=0)
 
     @property
     def eeros(self) -> list[dict[str, Any]]:
@@ -141,11 +150,11 @@ class EeroDevice(PollingDevice):
 
     @property
     def guest_network_enabled(self) -> bool:
-        return self._network_data.get("guest_network", {}).get("enabled", False)
+        return _safe_get(self._network_data, "guest_network", "enabled", default=False)
 
     @property
     def guest_network_name(self) -> str:
-        return self._network_data.get("guest_network", {}).get("name", "")
+        return _safe_get(self._network_data, "guest_network", "name", default="")
 
     @property
     def band_steering(self) -> bool:
@@ -169,69 +178,61 @@ class EeroDevice(PollingDevice):
 
     @property
     def dns_caching(self) -> bool:
-        return self._network_data.get("dns", {}).get("caching", False)
+        return _safe_get(self._network_data, "dns", "caching", default=False)
 
     @property
     def ad_block_enabled(self) -> bool:
-        return (
-            self._network_data.get("premium_dns", {})
-            .get("ad_block_settings", {})
-            .get("enabled", False)
-        )
+        return _safe_get(self._network_data, "premium_dns", "ad_block_settings", "enabled", default=False)
 
     @property
     def block_malware(self) -> bool:
-        return (
-            self._network_data.get("premium_dns", {})
-            .get("dns_policies", {})
-            .get("block_malware", False)
-        )
+        return _safe_get(self._network_data, "premium_dns", "dns_policies", "block_malware", default=False)
 
     @property
     def thread_enabled(self) -> bool:
-        return self._network_data.get("thread", {}).get("enabled", False)
+        return _safe_get(self._network_data, "thread", "enabled", default=False)
 
     @property
     def ddns_enabled(self) -> bool:
-        return self._network_data.get("ddns", {}).get("enabled", False)
+        return _safe_get(self._network_data, "ddns", "enabled", default=False)
 
     @property
     def pause_5g_enabled(self) -> bool:
-        return self._network_data.get("temporary_flags", {}).get("hide_5g", {}).get("value", False)
+        return _safe_get(self._network_data, "temporary_flags", "hide_5g", "value", default=False)
 
     @property
     def premium_enabled(self) -> bool:
         status = self._network_data.get("premium_status", "")
-        capable = self._network_data.get("capabilities", {}).get("premium", {}).get("capable", False)
+        capable = _safe_get(self._network_data, "capabilities", "premium", "capable", default=False)
         return capable and status in ("active", "trialing")
 
     @property
     def health_internet_status(self) -> str:
-        return self._network_data.get("health", {}).get("internet", {}).get("status", "unknown")
+        return _safe_get(self._network_data, "health", "internet", "status", default="unknown")
 
     @property
     def health_eero_network_status(self) -> str:
-        return self._network_data.get("health", {}).get("eero_network", {}).get("status", "unknown")
+        return _safe_get(self._network_data, "health", "eero_network", "status", default="unknown")
 
     @property
     def isp(self) -> str:
-        return self._network_data.get("geo_ip", {}).get("isp", "N/A")
+        return _safe_get(self._network_data, "geo_ip", "isp", default="N/A")
 
     @property
     def city(self) -> str:
-        return self._network_data.get("geo_ip", {}).get("city", "")
+        return _safe_get(self._network_data, "geo_ip", "city", default="")
 
     @property
     def thread_url(self) -> str:
-        return self._network_data.get("resources", {}).get("thread", "")
+        return _safe_get(self._network_data, "resources", "thread", default="")
 
     @property
     def reboot_url(self) -> str:
-        return self._network_data.get("resources", {}).get("reboot", "")
+        return _safe_get(self._network_data, "resources", "reboot", default="")
 
     @property
     def settings_url(self) -> str:
-        return self._network_data.get("resources", {}).get("settings", "")
+        return _safe_get(self._network_data, "resources", "settings", default="")
 
     async def establish_connection(self) -> None:
         _LOG.info("[%s] Connecting to eero cloud API", self.log_id)
@@ -264,7 +265,7 @@ class EeroDevice(PollingDevice):
         self._account_data = account
         self._account_name = account.get("name", "")
 
-        networks = account.get("networks", {}).get("data", [])
+        networks = _safe_get(account, "networks", "data", default=[])
         if not networks:
             raise ConnectionError("No networks found in eero account")
 
@@ -288,17 +289,14 @@ class EeroDevice(PollingDevice):
         network_data = await self._client.get_network(self._network_url)
         self._network_data = network_data
 
-        speed = network_data.get("speed", {})
-        down = speed.get("down", {})
-        up = speed.get("up", {})
-        self._speed_down = down.get("value")
-        self._speed_down_units = down.get("units", "Mbps")
-        self._speed_up = up.get("value")
-        self._speed_up_units = up.get("units", "Mbps")
+        self._speed_down = _safe_get(network_data, "speed", "down", "value", default=None)
+        self._speed_down_units = _safe_get(network_data, "speed", "down", "units", default="Mbps")
+        self._speed_up = _safe_get(network_data, "speed", "up", "value", default=None)
+        self._speed_up_units = _safe_get(network_data, "speed", "up", "units", default="Mbps")
 
-        self._eeros = network_data.get("eeros", {}).get("data", [])
+        self._eeros = _safe_get(network_data, "eeros", "data", default=[])
 
-        devices_url = network_data.get("resources", {}).get("devices", "")
+        devices_url = _safe_get(network_data, "resources", "devices", default="")
         if devices_url:
             try:
                 self._clients = await self._client.get_network_devices(devices_url)
