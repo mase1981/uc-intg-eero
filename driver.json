@@ -1,0 +1,40 @@
+{
+  "driver_id": "eero",
+  "version": "1.0.0",
+  "min_core_api": "0.22.0",
+  "name": {
+    "en": "eero WiFi"
+  },
+  "icon": "custom:eero.png",
+  "description": {
+    "en": "Integration for eero WiFi mesh network systems with network monitoring and device control"
+  },
+  "developer": {
+    "name": "Meir Miyara",
+    "email": "meir.miyara@gmail.com",
+    "url": "https://github.com/mase1981"
+  },
+  "home_page": "https://github.com/mase1981/uc-intg-eero",
+  "support": "https://github.com/mase1981/uc-intg-eero/issues",
+  "release_date": "2026-04-11",
+  "setup_data_schema": {
+    "title": {
+      "en": "Integration setup"
+    },
+    "settings": [
+      {
+        "id": "info",
+        "label": {
+          "en": "Setup process"
+        },
+        "field": {
+          "label": {
+            "value": {
+              "en": "This integration connects to your eero WiFi network via the eero cloud API to provide network monitoring and device control."
+            }
+          }
+        }
+      }
+    ]
+  }
+}
