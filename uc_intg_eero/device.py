@@ -231,6 +231,10 @@ class EeroDevice(PollingDevice):
         return _safe_get(self._network_data, "resources", "reboot", default="")
 
     @property
+    def dns_url(self) -> str:
+        return _safe_get(self._network_data, "resources", "dns", default="")
+
+    @property
     def settings_url(self) -> str:
         return _safe_get(self._network_data, "resources", "settings", default="")
 

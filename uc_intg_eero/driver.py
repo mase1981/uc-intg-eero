@@ -12,6 +12,7 @@ from ucapi_framework import BaseIntegrationDriver
 from uc_intg_eero.button import create_buttons
 from uc_intg_eero.config import EeroDeviceConfig
 from uc_intg_eero.device import EeroDevice
+from uc_intg_eero.remote import create_remote
 from uc_intg_eero.sensor import create_sensors
 from uc_intg_eero.switch import create_network_switches, create_eero_led_switches
 
@@ -29,5 +30,6 @@ class EeroDriver(BaseIntegrationDriver[EeroDevice, EeroDeviceConfig]):
                 lambda cfg, dev: create_network_switches(cfg, dev),
                 lambda cfg, dev: create_eero_led_switches(cfg, dev),
                 lambda cfg, dev: create_buttons(cfg, dev),
+                lambda cfg, dev: create_remote(cfg, dev),
             ],
         )

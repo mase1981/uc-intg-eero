@@ -157,7 +157,7 @@ class DnsCachingSwitch(EeroSwitch):
         return self._device.dns_caching
 
     async def _set_value(self, value: bool) -> None:
-        await self._device.client.set_dns_caching(self._device.network_id, value)
+        await self._device.client.set_dns_caching(self._device.dns_url, value)
 
 
 class AdBlockSwitch(EeroSwitch):

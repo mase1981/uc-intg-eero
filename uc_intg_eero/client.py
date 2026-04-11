@@ -128,15 +128,14 @@ class EeroClient:
     async def get_eeros(self, network_data: dict) -> list[dict]:
         return network_data.get("eeros", {}).get("data", [])
 
-    async def set_network_setting(self, network_url: str, setting: str, value: Any) -> None:
-        settings_url = f"{network_url}/settings"
+    async def set_network_setting(self, settings_url: str, setting: str, value: Any) -> None:
         await self._request("PUT", settings_url, json={setting: value})
 
     async def set_guest_network(self, network_id: str, enabled: bool) -> None:
         await self._request("PUT", f"/2.2/networks/{network_id}/guestnetwork", json={"enabled": enabled})
 
-    async def set_dns_caching(self, network_id: str, caching: bool) -> None:
-        await self._request("PUT", f"/2.2/networks/{network_id}/dns", json={"caching": caching})
+    async def set_dns_caching(self, dns_url: str, caching: bool) -> None:
+        await self._request("PUT", dns_url, json={"caching": caching})
 
     async def set_ad_block(self, network_url: str, enabled: bool) -> None:
         await self._request("POST", f"{network_url}/dns_policies/adblock", json={"enable": enabled})
