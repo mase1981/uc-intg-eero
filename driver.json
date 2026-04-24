@@ -1,6 +1,6 @@
 {
   "driver_id": "uc_eero",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "min_core_api": "0.22.0",
   "name": {
     "en": "eero WiFi"
@@ -16,7 +16,7 @@
   },
   "home_page": "https://github.com/mase1981/uc-intg-eero",
   "support": "https://github.com/mase1981/uc-intg-eero/issues",
-  "release_date": "2026-04-11",
+  "release_date": "2026-04-24",
   "setup_data_schema": {
     "title": {
       "en": "Integration setup"

@@ -83,6 +83,21 @@ class RunSpeedTestButton(EeroButton):
         _LOG.info("[%s] Speed test initiated", self._device.log_id)
 
 
+class UpdateFirmwareButton(EeroButton):
+    """Button to trigger a firmware update on the eero network."""
+
+    def __init__(self, config: EeroDeviceConfig, device: EeroDevice):
+        super().__init__(config, device, "update_firmware", "Update Firmware")
+
+    async def _execute(self) -> None:
+        updates_url = self._device.updates_url
+        if updates_url:
+            await self._device.client.update_firmware(updates_url)
+            _LOG.info("[%s] Firmware update initiated", self._device.log_id)
+        else:
+            raise RuntimeError("Updates URL not available")
+
+
 class RebootEeroButton(Button):
     """Button to reboot an individual eero node."""
 
@@ -134,6 +149,7 @@ def create_buttons(config: EeroDeviceConfig, device: EeroDevice) -> list:
     buttons = [
         RebootNetworkButton(config, device),
         RunSpeedTestButton(config, device),
+        UpdateFirmwareButton(config, device),
     ]
 
     for i, eero_data in enumerate(device.eeros):

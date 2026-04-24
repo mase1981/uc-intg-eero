@@ -169,6 +169,9 @@ class EeroClient:
     async def run_speed_test(self, network_url: str) -> None:
         await self._request("POST", f"{network_url}/speedtest")
 
+    async def update_firmware(self, updates_url: str) -> None:
+        await self._request("POST", updates_url)
+
     async def set_client_paused(self, network_id: str, mac: str, paused: bool) -> None:
         await self._request("PUT", f"/2.3/networks/{network_id}/devices/{mac}", json={"paused": paused})
 

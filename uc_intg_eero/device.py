@@ -50,6 +50,10 @@ class EeroDevice(PollingDevice):
         # Connected clients
         self._clients: list[dict[str, Any]] = []
 
+        # Firmware update data
+        self._target_firmware: dict[str, Any] = {}
+        self._firmware_history: list[dict[str, Any]] = []
+
         # Speed test data
         self._speed_down: float | None = None
         self._speed_down_units: str = "Mbps"
@@ -223,6 +227,22 @@ class EeroDevice(PollingDevice):
         return _safe_get(self._network_data, "geo_ip", "city", default="")
 
     @property
+    def target_firmware(self) -> dict[str, Any]:
+        return self._target_firmware
+
+    @property
+    def updates_url(self) -> str:
+        return _safe_get(self._network_data, "resources", "updates", default="")
+
+    def get_eero_firmware_info(self, eero_data: dict) -> dict[str, str]:
+        current = eero_data.get("os_version", "Unknown")
+        current_base = current.split("-")[0] if current else "Unknown"
+        target_ver = _safe_get(self._target_firmware, "os_version", default=None)
+        if target_ver and target_ver != current_base:
+            return {"current": current, "target": target_ver, "update_available": "Yes"}
+        return {"current": current, "target": current_base, "update_available": "No"}
+
+    @property
     def thread_url(self) -> str:
         return _safe_get(self._network_data, "resources", "thread", default="")
 
@@ -300,6 +320,13 @@ class EeroDevice(PollingDevice):
 
         self._eeros = _safe_get(network_data, "eeros", "data", default=[])
 
+        self._target_firmware = _safe_get(
+            network_data, "updates", "release_notes", "target", default={}
+        )
+        self._firmware_history = _safe_get(
+            network_data, "updates", "release_notes", "history", default=[]
+        )
+
         devices_url = _safe_get(network_data, "resources", "devices", default="")
         if devices_url:
             try:
@@ -361,6 +388,14 @@ class EeroDevice(PollingDevice):
                 value = f"{status} | Clients: {clients} | OS: {os_ver}"
                 self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.eero_{eero_id}",
                                 {"state": "ON", "value": value})
+
+                fw_info = self.get_eero_firmware_info(eero_data)
+                if fw_info["update_available"] == "Yes":
+                    fw_value = f"{fw_info['current']} → {fw_info['target']}"
+                else:
+                    fw_value = f"{fw_info['current']} (Up to date)"
+                self.events.emit(DeviceEvents.UPDATE, f"sensor.{ident}.firmware_{eero_id}",
+                                {"state": "ON", "value": fw_value})
 
         # Switch updates
         switch_states = {

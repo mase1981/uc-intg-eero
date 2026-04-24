@@ -93,6 +93,44 @@ class SpeedDateSensor(EeroSensor):
         super().__init__(config, device, "speed_date", "Last Speed Test")
 
 
+class EeroFirmwareSensor(Sensor):
+    """Firmware version sensor for an individual eero node."""
+
+    def __init__(
+        self,
+        config: EeroDeviceConfig,
+        device: EeroDevice,
+        eero_data: dict,
+        index: int,
+    ):
+        self._device = device
+        self._config = config
+        self._eero_url = eero_data.get("url", "")
+        self._index = index
+
+        location = eero_data.get("location", f"Eero {index + 1}")
+        eero_id = self._eero_url.replace("/2.2/eeros/", "") if self._eero_url else f"eero_{index}"
+
+        entity_id = f"sensor.{config.identifier}.firmware_{eero_id}"
+
+        fw_info = device.get_eero_firmware_info(eero_data)
+        if fw_info["update_available"] == "Yes":
+            initial_value = f"{fw_info['current']} → {fw_info['target']}"
+        else:
+            initial_value = f"{fw_info['current']} (Up to date)"
+
+        super().__init__(
+            entity_id,
+            f"{config.name} - {location} Firmware",
+            [],
+            {
+                Attributes.STATE: States.ON,
+                Attributes.VALUE: initial_value,
+            },
+            device_class=DeviceClasses.CUSTOM,
+        )
+
+
 class EeroNodeSensor(Sensor):
     """Sensor for an individual eero node."""
 
@@ -143,5 +181,6 @@ def create_sensors(config: EeroDeviceConfig, device: EeroDevice) -> list:
 
     for i, eero_data in enumerate(device.eeros):
         sensors.append(EeroNodeSensor(config, device, eero_data, i))
+        sensors.append(EeroFirmwareSensor(config, device, eero_data, i))
 
     return sensors
